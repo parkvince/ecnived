@@ -8,6 +8,7 @@ import Radar from '@/components/Radar';
 import Lab from '@/components/Lab';
 import Portfolio from '@/components/Portfolio';
 import Landing from '@/components/Landing';
+import Digest from '@/components/Digest';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
@@ -28,6 +29,7 @@ export default function Home() {
       {tab === 'Radar' && <Radar refreshKey={refreshKey} />}
       {tab === 'Lab' && <Lab />}
       {tab === 'Portfolio' && <Portfolio refreshKey={refreshKey} />}
+      {tab === 'Digest' && <Digest />}
       <div style={{
         fontSize: 11, color: 'var(--text3)', textAlign: 'center',
         padding: '18px 20px', borderTop: '1px solid var(--border)', marginTop: 40, lineHeight: 1.7,
