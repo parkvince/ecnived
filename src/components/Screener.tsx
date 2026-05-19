@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import ScoreRing from './ScoreRing';
+import StockChart from './StockChart';
 
 interface Stock {
   sym: string;
@@ -44,6 +45,7 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
   const [search, setSearch] = useState('');
   const [acResults, setAcResults] = useState<any[]>([]);
   const [showAc, setShowAc] = useState(false);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   const [sector, setSector] = useState('');
   const [maxDte, setMaxDte] = useState('');
@@ -75,6 +77,7 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
       const res = await fetch(`/api/quote?symbol=${sym}`);
       const data = await res.json();
       setSelected(data);
+      setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     } catch {}
     setDetailLoading(false);
   }
@@ -136,7 +139,7 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
           onChange={e => onSearchChange(e.target.value)}
           onFocus={() => acResults.length && setShowAc(true)}
           onBlur={() => setTimeout(() => setShowAc(false), 150)}
-          placeholder="Search ticker or company — e.g. AAPL, Tesla, NVDA..."
+          placeholder="Search ticker or company — e.g. AAPL, Tesla, NVDA, SPY, QQQ..."
           style={{
             width: '100%', padding: '10px 12px 10px 36px',
             border: '1px solid var(--border)', borderRadius: 8,
@@ -163,6 +166,7 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
                   <strong style={{ fontFamily: 'monospace' }}>{r.symbol}</strong>
                   <span style={{ fontSize: 12, color: 'var(--text2)', marginLeft: 8 }}>{r.description}</span>
                 </span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{r.type}</span>
               </div>
             ))}
           </div>
@@ -171,15 +175,16 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
 
       {/* DETAIL CARD */}
       {(selected || detailLoading) && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid #1a6b3c', borderRadius: 14, padding: '20px 22px', marginBottom: 22 }}>
+        <div ref={detailRef} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid #1a6b3c', borderRadius: 14, padding: '20px 22px', marginBottom: 22 }}>
           {detailLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div className="skeleton" style={{ height: 30, width: '40%' }} />
               <div className="skeleton" style={{ height: 20, width: '60%' }} />
-              <div className="skeleton" style={{ height: 120 }} />
+              <div className="skeleton" style={{ height: 200 }} />
             </div>
           ) : selected && (
             <>
+              {/* HEADER */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14, marginBottom: 16 }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -231,6 +236,15 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* PRICE CHART */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                  Price Chart
+                  <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8 }}>via Yahoo Finance · hover to inspect</span>
+                </div>
+                <StockChart symbol={selected.symbol} />
               </div>
 
               {/* EARNINGS HISTORY */}
