@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import ScoreRing from './ScoreRing';
+import StockChart from './StockChart';
 import { scoreToProbability } from '@/lib/scores';
 
 const CALENDAR = [
@@ -128,7 +129,14 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
                   <ScoreRing score={detail.ecniveScore} size={52} fontSize={16} />
                 </div>
               </div>
-
+              {/* PRICE CHART */}
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                Price Chart
+                  <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8 }}>via Yahoo Finance · hover to inspect</span>
+                 </div>
+                <StockChart symbol={selected!} />
+                </div>
               {/* SIGNAL CARDS */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 22 }}>
                 {[

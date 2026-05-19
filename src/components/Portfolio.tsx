@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { loadPortfolio, savePortfolio, Position } from '@/lib/storage';
 import ScoreRing from './ScoreRing';
+import StockChart from './StockChart';
 
 interface EnrichedPosition extends Position {
   currentPrice: number | null;
@@ -24,6 +25,7 @@ export default function Portfolio({ refreshKey }: { refreshKey: number }) {
   const [rebalResult, setRebalResult] = useState('');
   const [rebalLoading, setRebalLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [chartTicker, setChartTicker] = useState<string | null>(null);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -96,6 +98,7 @@ export default function Portfolio({ refreshKey }: { refreshKey: number }) {
     setPositions(updated);
     savePortfolio(updated);
     setEnriched(enriched.filter(e => e.ticker !== ticker));
+    if (chartTicker === ticker) setChartTicker(null);
     showToast(`${ticker} removed`);
   }
 
@@ -130,24 +133,24 @@ export default function Portfolio({ refreshKey }: { refreshKey: number }) {
 Holdings: ${enriched.map(e => `${e.ticker} (Score: ${e.score}, ${e.sentiment})`).join(', ')}
 
 ${highRisk.length > 0
-  ? `Highest risk holdings: ${highRisk.map(e => `${e.ticker} (${e.score}/100)`).join(', ')}`
-  : 'All holdings show acceptable Ecnived scores — no immediate red flags.'}
+      ? `Highest risk holdings: ${highRisk.map(e => `${e.ticker} (${e.score}/100)`).join(', ')}`
+      : 'All holdings show acceptable Ecnived scores — no immediate red flags.'}
 
 DETERIORATING SIGNALS
 ${highRisk.length > 0
-  ? highRisk.map(e => `• ${e.ticker}: Score ${e.score}/100, sentiment ${e.sentiment} — monitor ahead of earnings`).join('\n')
-  : '• No significant deteriorating signals detected in current holdings.'}
+      ? highRisk.map(e => `• ${e.ticker}: Score ${e.score}/100, sentiment ${e.sentiment} — monitor ahead of earnings`).join('\n')
+      : '• No significant deteriorating signals detected in current holdings.'}
 
 REBALANCING SUGGESTIONS
 1. ${topConc && topConc.pct > 40
-  ? `${topConc.ticker} is ${topConc.pct.toFixed(0)}% of portfolio — consider trimming for diversification`
-  : 'Portfolio concentration looks reasonable — no single holding dominates'}
+      ? `${topConc.ticker} is ${topConc.pct.toFixed(0)}% of portfolio — consider trimming for diversification`
+      : 'Portfolio concentration looks reasonable — no single holding dominates'}
 2. ${topPick
-  ? `${topPick.ticker} has strongest Ecnived signal (${topPick.score}/100) — core holding, consider maintaining or adding`
-  : 'Maintain current allocation until clearer signals emerge'}
+      ? `${topPick.ticker} has strongest Ecnived signal (${topPick.score}/100) — core holding, consider maintaining or adding`
+      : 'Maintain current allocation until clearer signals emerge'}
 3. ${highRisk.length > 0
-  ? `Consider reducing ${highRisk[0].ticker} — below-average score suggests elevated earnings risk`
-  : 'Current holdings are well-positioned — stay the course'}
+      ? `Consider reducing ${highRisk[0].ticker} — below-average score suggests elevated earnings risk`
+      : 'Current holdings are well-positioned — stay the course'}
 
 OVERALL ASSESSMENT
 Portfolio risk score: ${riskScore}/100 — ${riskScore > 60 ? 'High Risk' : riskScore > 40 ? 'Moderate Risk' : 'Low Risk'}. ${enriched.length} positions, combined value $${totalVal.toLocaleString('en-US', { maximumFractionDigits: 0 })}. ${highRisk.length === 0 ? 'Portfolio is well-positioned for upcoming earnings season.' : `${highRisk.length} holding(s) warrant active monitoring.`}
@@ -279,54 +282,76 @@ Portfolio risk score: ${riskScore}/100 — ${riskScore > 60 ? 'High Risk' : risk
           <span style={{ marginLeft: 8, fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'var(--surface2)', color: 'var(--text3)' }}>
             {positions.length} positions
           </span>
-          <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text3)' }}>Saved in browser · persists across sessions</span>
+          <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text3)' }}>Saved in browser · persists across sessions · click ticker for chart</span>
         </div>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[0,1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 44 }} />)}
+            {[0, 1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 44 }} />)}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  {['Ticker','Shares','Cost','Current','Value','P&L ($)','P&L (%)','Score','Alert',''].map(h => (
+                  {['Ticker', 'Shares', 'Cost', 'Current', 'Value', 'P&L ($)', 'P&L (%)', 'Score', 'Alert', ''].map(h => (
                     <th key={h} style={{ textAlign: 'left', fontSize: 10, fontWeight: 600, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--text3)', padding: '7px 10px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {enriched.map(e => (
-                  <tr key={e.ticker}>
-                    <td style={td}><strong style={{ fontFamily: 'monospace' }}>{e.ticker}</strong></td>
-                    <td style={td}><span style={{ fontFamily: 'monospace' }}>{e.shares}</span></td>
-                    <td style={td}><span style={{ fontFamily: 'monospace' }}>${e.cost.toFixed(2)}</span></td>
-                    <td style={td}>
-                      <div style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.currentPrice ? `$${e.currentPrice.toFixed(2)}` : '—'}</div>
-                      {e.change != null && <div style={{ fontSize: 10, color: e.change >= 0 ? '#1a8c52' : '#c0392b' }}>{e.change >= 0 ? '+' : ''}{e.change}%</div>}
-                    </td>
-                    <td style={td}><span style={{ fontFamily: 'monospace' }}>{e.value ? `$${e.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'}</span></td>
-                    <td style={td}>
-                      {e.pnl != null && <span style={{ fontWeight: 500, color: e.pnl >= 0 ? '#1a8c52' : '#c0392b' }}>
-                        {e.pnl >= 0 ? '+' : '-'}${Math.abs(e.pnl).toFixed(0)}
-                      </span>}
-                    </td>
-                    <td style={td}>
-                      {e.pnlPct != null && <span style={{ fontSize: 12, color: e.pnlPct >= 0 ? '#1a8c52' : '#c0392b' }}>
-                        {e.pnlPct >= 0 ? '+' : ''}{e.pnlPct.toFixed(1)}%
-                      </span>}
-                    </td>
-                    <td style={td}><ScoreRing score={e.score} size={30} fontSize={10} /></td>
-                    <td style={td}>
-                      {e.score < 45 && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--red-light)', color: '#c0392b' }}>⚠ Weak</span>}
-                      {e.score >= 75 && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--green-light)', color: '#1a6b3c' }}>★ Strong</span>}
-                    </td>
-                    <td style={td}>
-                      <button onClick={() => removePosition(e.ticker)} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text3)' }}>
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
+                  <>
+                    <tr key={e.ticker}>
+                      <td style={td}>
+                        <div
+                          style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1a6b3c', cursor: 'pointer', textDecoration: 'underline dotted' }}
+                          onClick={() => setChartTicker(prev => prev === e.ticker ? null : e.ticker)}
+                          title="Click to view chart"
+                        >
+                          {e.ticker} {chartTicker === e.ticker ? '▲' : '▼'}
+                        </div>
+                      </td>
+                      <td style={td}><span style={{ fontFamily: 'monospace' }}>{e.shares}</span></td>
+                      <td style={td}><span style={{ fontFamily: 'monospace' }}>${e.cost.toFixed(2)}</span></td>
+                      <td style={td}>
+                        <div style={{ fontFamily: 'monospace', fontSize: 12 }}>{e.currentPrice ? `$${e.currentPrice.toFixed(2)}` : '—'}</div>
+                        {e.change != null && <div style={{ fontSize: 10, color: e.change >= 0 ? '#1a8c52' : '#c0392b' }}>{e.change >= 0 ? '+' : ''}{e.change}%</div>}
+                      </td>
+                      <td style={td}><span style={{ fontFamily: 'monospace' }}>{e.value ? `$${e.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : '—'}</span></td>
+                      <td style={td}>
+                        {e.pnl != null && <span style={{ fontWeight: 500, color: e.pnl >= 0 ? '#1a8c52' : '#c0392b' }}>
+                          {e.pnl >= 0 ? '+' : '-'}${Math.abs(e.pnl).toFixed(0)}
+                        </span>}
+                      </td>
+                      <td style={td}>
+                        {e.pnlPct != null && <span style={{ fontSize: 12, color: e.pnlPct >= 0 ? '#1a8c52' : '#c0392b' }}>
+                          {e.pnlPct >= 0 ? '+' : ''}{e.pnlPct.toFixed(1)}%
+                        </span>}
+                      </td>
+                      <td style={td}><ScoreRing score={e.score} size={30} fontSize={10} /></td>
+                      <td style={td}>
+                        {e.score < 45 && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--red-light)', color: '#c0392b' }}>⚠ Weak</span>}
+                        {e.score >= 75 && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--green-light)', color: '#1a6b3c' }}>★ Strong</span>}
+                      </td>
+                      <td style={td}>
+                        <button onClick={() => removePosition(e.ticker)} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text3)' }}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                    {chartTicker === e.ticker && (
+                      <tr key={`chart-${e.ticker}`}>
+                        <td colSpan={10} style={{ padding: '16px 10px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                            {e.ticker} Price Chart
+                            <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8 }}>via Yahoo Finance · hover to inspect</span>
+                            <button onClick={() => setChartTicker(null)} style={{ marginLeft: 12, fontSize: 10, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text3)' }}>✕ Close</button>
+                          </div>
+                          <StockChart symbol={e.ticker} />
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
                 {enriched.length === 0 && (
                   <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>No positions yet — add your first holding above</td></tr>
