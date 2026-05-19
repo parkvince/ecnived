@@ -3,6 +3,20 @@ import { getQuote, getEarningsSurprises, getBasicFinancials } from '@/lib/finnhu
 import { calcEcniveScore, scoreToSentiment } from '@/lib/scores';
 
 const UNIVERSE = [
+  // ETFs
+  { sym: 'SPY', name: 'S&P 500 ETF (SPDR)', sector: 'ETF', dte: 999 },
+  { sym: 'QQQ', name: 'NASDAQ 100 ETF (Invesco)', sector: 'ETF', dte: 999 },
+  { sym: 'QQQM', name: 'NASDAQ 100 ETF (Mini)', sector: 'ETF', dte: 999 },
+  { sym: 'IWM', name: 'Russell 2000 ETF', sector: 'ETF', dte: 999 },
+  { sym: 'DIA', name: 'Dow Jones ETF (SPDR)', sector: 'ETF', dte: 999 },
+  { sym: 'VTI', name: 'Total Market ETF (Vanguard)', sector: 'ETF', dte: 999 },
+  { sym: 'VOO', name: 'S&P 500 ETF (Vanguard)', sector: 'ETF', dte: 999 },
+  { sym: 'XLK', name: 'Technology Sector ETF', sector: 'ETF', dte: 999 },
+  { sym: 'XLF', name: 'Financial Sector ETF', sector: 'ETF', dte: 999 },
+  { sym: 'XLE', name: 'Energy Sector ETF', sector: 'ETF', dte: 999 },
+  { sym: 'GLD', name: 'Gold ETF (SPDR)', sector: 'ETF', dte: 999 },
+  { sym: 'TLT', name: '20+ Year Treasury ETF', sector: 'ETF', dte: 999 },
+
   { sym: 'AAPL', name: 'Apple Inc.', sector: 'Technology', dte: 12 },
   { sym: 'MSFT', name: 'Microsoft Corp.', sector: 'Technology', dte: 8 },
   { sym: 'NVDA', name: 'NVIDIA Corp.', sector: 'Technology', dte: 7 },

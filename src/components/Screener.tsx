@@ -32,8 +32,7 @@ interface StockDetail {
   shortInterest: number;
 }
 
-const SECTORS = ['', 'Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Industrials'];
-const SENTIMENTS = ['', 'Very Bullish', 'Bullish', 'Neutral', 'Bearish', 'Very Bearish'];
+const SECTORS = ['', 'ETF', 'Technology', 'Healthcare', 'Finance', 'Consumer', 'Energy', 'Industrials'];const SENTIMENTS = ['', 'Very Bullish', 'Bullish', 'Neutral', 'Bearish', 'Very Bearish'];
 
 export default function Screener({ refreshKey }: { refreshKey: number }) {
   const [stocks, setStocks] = useState<Stock[]>([]);

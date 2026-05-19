@@ -185,16 +185,19 @@ export default function StockChart({ symbol }: { symbol: string }) {
         </div>
       </div>
 
-      {/* Hover tooltip */}
-      {hover && (
-        <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 6, fontFamily: 'monospace', display: 'flex', gap: 14 }}>
-          <span style={{ color: lineColor, fontWeight: 700 }}>${hover.point.price.toFixed(2)}</span>
-          <span>{new Date(hover.point.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            {(range === '1D' || range === '5D') && ` ${new Date(hover.point.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
-          </span>
-        </div>
-      )}
-
+        {/* Hover tooltip — always reserve space so chart doesn't jump */}
+      <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 6, fontFamily: 'monospace', display: 'flex', gap: 14, height: 16, alignItems: 'center' }}>
+        {hover ? (
+          <>
+            <span style={{ color: lineColor, fontWeight: 700 }}>${hover.point.price.toFixed(2)}</span>
+            <span>{new Date(hover.point.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {(range === '1D' || range === '5D') && ` ${new Date(hover.point.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`}
+            </span>
+          </>
+        ) : (
+          <span style={{ color: 'var(--text3)' }}>Hover to inspect price</span>
+        )}
+      </div>
       {/* Canvas */}
       <div style={{ position: 'relative', height: 200, width: '100%' }}>
         {loading && (
