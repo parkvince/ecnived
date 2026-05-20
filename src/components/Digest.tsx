@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const CATEGORIES = ['All', 'Earnings', 'Markets', 'Economy', 'Technology', 'Energy'];
 
@@ -22,6 +22,9 @@ const FINANCE_CONCEPTS = [
 ];
 
 const CITATION_FORMATS = ['APA', 'MLA', 'Chicago', 'AMA', 'Harvard'];
+const PAGE_SIZE = 15;
+
+const TICKERS = ['AAPL', 'NVDA', 'MSFT', 'JPM', 'XOM', 'AMZN', 'TSLA', 'META', 'AMD', 'GS', 'V', 'JNJ', 'LLY', 'WMT', 'GOOGL'];
 
 function sentimentColor(s: string) {
   if (s === 'Positive') return { bg: 'var(--green-light)', color: '#1a6b3c' };
@@ -52,33 +55,19 @@ function generateCitation(article: any, format: string): string {
   const year = date.getFullYear();
   const fullDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const accessDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
   switch (format) {
-    case 'APA':
-      return `${author}. (${year}, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}). ${title}. ${site}. Retrieved ${accessDate}, from ${url}`;
-    case 'MLA':
-      return `"${title}." ${site}, ${fullDate}, ${url}. Accessed ${accessDate}.`;
-    case 'Chicago':
-      return `${author}. "${title}." ${site}. ${fullDate}. ${url}.`;
-    case 'AMA':
-      return `${author}. ${title}. ${site}. Published ${fullDate}. Accessed ${accessDate}. ${url}`;
-    case 'Harvard':
-      return `${author} (${year}) '${title}', ${site}, ${fullDate}. Available at: ${url} (Accessed: ${accessDate}).`;
-    default:
-      return `${author}. "${title}." ${site}, ${fullDate}.`;
+    case 'APA': return `${author}. (${year}, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}). ${title}. ${site}. Retrieved ${accessDate}, from ${url}`;
+    case 'MLA': return `"${title}." ${site}, ${fullDate}, ${url}. Accessed ${accessDate}.`;
+    case 'Chicago': return `${author}. "${title}." ${site}. ${fullDate}. ${url}.`;
+    case 'AMA': return `${author}. ${title}. ${site}. Published ${fullDate}. Accessed ${accessDate}. ${url}`;
+    case 'Harvard': return `${author} (${year}) '${title}', ${site}, ${fullDate}. Available at: ${url} (Accessed: ${accessDate}).`;
+    default: return `${author}. "${title}." ${site}, ${fullDate}.`;
   }
 }
 
-function summarizeArticle(article: any): string {
-  const sent = sentimentFromHeadline(article.headline);
-  const ticker = article.ticker || 'the market';
-  const date = article.datetime ? new Date(article.datetime * 1000).toLocaleDateString() : 'recently';
-
-  return `ARTICLE SUMMARY\n\n"${article.headline}"\n— ${article.source}, ${date}\n\nSENTIMENT: ${sent}\n\nKEY TAKEAWAY\nThis ${sent.toLowerCase()} story from ${article.source} covers developments related to ${ticker}. ${sent === 'Positive' ? `The headline signals strength — words like "beat," "growth," or "surge" indicate upward momentum or better-than-expected results.` : sent === 'Negative' ? `The headline signals weakness — words like "miss," "fall," or "decline" suggest deteriorating conditions or disappointing results.` : `The story appears factual or mixed in tone — no strong directional signal from the headline alone.`}\n\nWHY IT MATTERS\n${ticker !== 'the market' ? `For $${ticker}: news sentiment is one of the inputs to the Ecnived score. A cluster of ${sent.toLowerCase()} headlines can shift the score and signal upcoming price movement.` : `Market-wide news affects broad indices and sector ETFs. Watch for follow-through in futures and opening price action.'`}\n\nNOTE: This summary is generated from the headline only. Click "Open Article" to read the full piece.\nData via Finnhub · Not financial advice`;
-}
-
 export default function Digest() {
-  const [news, setNews] = useState<any[]>([]);
+  const [allNews, setAllNews] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
@@ -92,16 +81,17 @@ export default function Digest() {
   const [showRecap, setShowRecap] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [summaries, setSummaries] = useState<Record<number, string>>({});
+  const [summaryLoading, setSummaryLoading] = useState<Record<number, boolean>>({});
   const [citationFormat, setCitationFormat] = useState<Record<number, string>>({});
   const [showCitation, setShowCitation] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState<number | null>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
 
   async function loadNews() {
     setLoading(true);
     try {
-      const tickers = ['AAPL', 'NVDA', 'MSFT', 'JPM', 'XOM', 'AMZN', 'TSLA', 'META', 'AMD', 'GS'];
       const results = await Promise.all(
-        tickers.map(t => fetch(`/api/news?symbol=${t}`).then(r => r.json()))
+        TICKERS.map(t => fetch(`/api/news?symbol=${t}`).then(r => r.json()))
       );
       const all: any[] = [];
       const seen = new Set();
@@ -109,15 +99,32 @@ export default function Digest() {
         (r.items || []).forEach((item: any) => {
           if (!seen.has(item.headline)) {
             seen.add(item.headline);
-            all.push({ ...item, ticker: tickers[i] });
+            all.push({ ...item, ticker: TICKERS[i] });
           }
         });
       });
       all.sort((a, b) => b.datetime - a.datetime);
-      setNews(all);
+      setAllNews(all);
     } catch {}
     setLoading(false);
   }
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => prev + PAGE_SIZE);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Reset visible count when filters change
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [category, search]);
 
   async function searchCompany() {
     if (!searchTicker.trim()) return;
@@ -139,24 +146,24 @@ export default function Digest() {
     setRecapLoading(true);
     setRecap('');
     setShowRecap(true);
-    const posCount = news.filter(n => sentimentFromHeadline(n.headline) === 'Positive').length;
-    const negCount = news.filter(n => sentimentFromHeadline(n.headline) === 'Negative').length;
-    const total = news.length;
+    const posCount = allNews.filter(n => sentimentFromHeadline(n.headline) === 'Positive').length;
+    const negCount = allNews.filter(n => sentimentFromHeadline(n.headline) === 'Negative').length;
+    const total = allNews.length;
     const sentimentBias = posCount > negCount ? 'broadly positive' : negCount > posCount ? 'broadly negative' : 'mixed';
-
     const summary = `MARKET RECAP — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
 
 OVERALL SENTIMENT
 Today's news flow was ${sentimentBias} across ${total} headlines analyzed. ${posCount} positive signals vs ${negCount} negative signals detected across major S&P 500 components.
 
 KEY THEMES TODAY
-${news.slice(0, 3).map((n, i) => `${i + 1}. ${n.headline} — ${n.source}`).join('\n')}
+${allNews.slice(0, 3).map((n, i) => `${i + 1}. ${n.headline} — ${n.source}`).join('\n')}
 
 SECTOR BREAKDOWN
-- Technology (AAPL, NVDA, MSFT, AMD): ${news.filter(n => ['AAPL','NVDA','MSFT','AMD','META'].includes(n.ticker)).length} stories
-- Finance (JPM, GS): ${news.filter(n => ['JPM','GS'].includes(n.ticker)).length} stories
-- Consumer (TSLA, AMZN): ${news.filter(n => ['TSLA','AMZN'].includes(n.ticker)).length} stories
-- Energy (XOM): ${news.filter(n => n.ticker === 'XOM').length} stories
+- Technology (AAPL, NVDA, MSFT, AMD, META): ${allNews.filter(n => ['AAPL','NVDA','MSFT','AMD','META','GOOGL'].includes(n.ticker)).length} stories
+- Finance (JPM, GS, V): ${allNews.filter(n => ['JPM','GS','V'].includes(n.ticker)).length} stories
+- Consumer (TSLA, AMZN, WMT): ${allNews.filter(n => ['TSLA','AMZN','WMT'].includes(n.ticker)).length} stories
+- Healthcare (JNJ, LLY): ${allNews.filter(n => ['JNJ','LLY'].includes(n.ticker)).length} stories
+- Energy (XOM): ${allNews.filter(n => n.ticker === 'XOM').length} stories
 
 WHAT TO WATCH TOMORROW
 - Monitor overnight futures for gap risk
@@ -164,7 +171,6 @@ WHAT TO WATCH TOMORROW
 - Any after-hours earnings reactions carrying into open
 
 [Generated from ${total} real Finnhub headlines · ${new Date().toLocaleTimeString()}]`;
-
     let i = 0;
     const interval = setInterval(() => {
       i += 5;
@@ -173,64 +179,66 @@ WHAT TO WATCH TOMORROW
     }, 10);
   }
 
-  function toggleExpand(idx: number) {
-    setExpandedIdx(prev => prev === idx ? null : idx);
-  }
-
-  function handleSummarize(idx: number, article: any) {
-    if (!summaries[idx]) {
-      setSummaries(prev => ({ ...prev, [idx]: summarizeArticle(article) }));
+  async function handleSummarize(idx: number, article: any) {
+    if (summaries[idx]) return;
+    setSummaryLoading(prev => ({ ...prev, [idx]: true }));
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: article.url, headline: article.headline, source: article.source }),
+      });
+      const data = await res.json();
+      setSummaries(prev => ({ ...prev, [idx]: data.summary }));
+    } catch {
+      setSummaries(prev => ({ ...prev, [idx]: 'Could not load summary. Try opening the article directly.' }));
     }
+    setSummaryLoading(prev => ({ ...prev, [idx]: false }));
   }
 
   function handleCopy(idx: number, article: any) {
     const fmt = citationFormat[idx] || 'APA';
-    const text = generateCitation(article, fmt);
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(generateCitation(article, fmt));
     setCopied(idx);
     setTimeout(() => setCopied(null), 2000);
   }
 
   useEffect(() => {
     loadNews();
-    // Random concept on each page load
     setConceptIdx(Math.floor(Math.random() * FINANCE_CONCEPTS.length));
   }, []);
 
-  const filtered = news.filter(n => {
+  const filtered = allNews.filter(n => {
     if (category !== 'All') {
       const map: Record<string, string[]> = {
-        Earnings: ['AAPL', 'NVDA', 'MSFT', 'AMZN', 'META', 'TSLA', 'AMD', 'GS', 'JPM'],
-        Markets: ['SPY', 'QQQ', 'AAPL', 'MSFT'],
+        Earnings: ['AAPL', 'NVDA', 'MSFT', 'AMZN', 'META', 'TSLA', 'AMD', 'GS', 'JPM', 'V', 'JNJ', 'LLY', 'WMT', 'GOOGL'],
+        Markets: ['AAPL', 'MSFT', 'GOOGL'],
         Economy: ['JPM', 'GS', 'XOM'],
-        Technology: ['AAPL', 'NVDA', 'MSFT', 'AMZN', 'META', 'AMD'],
+        Technology: ['AAPL', 'NVDA', 'MSFT', 'AMZN', 'META', 'AMD', 'GOOGL'],
         Energy: ['XOM'],
       };
       if (!map[category]?.includes(n.ticker)) return false;
     }
     if (search) {
       const q = search.toLowerCase();
-      const inHeadline = n.headline?.toLowerCase().includes(q);
-      const inSource = n.source?.toLowerCase().includes(q);
-      const inTicker = n.ticker?.toLowerCase().includes(q);
-      if (!inHeadline && !inSource && !inTicker) return false;
+      if (!n.headline?.toLowerCase().includes(q) && !n.source?.toLowerCase().includes(q) && !n.ticker?.toLowerCase().includes(q)) return false;
     }
     return true;
   });
 
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
   const concept = FINANCE_CONCEPTS[conceptIdx];
-
-  const tdStyle: React.CSSProperties = { padding: '6px 8px', fontSize: 11, borderBottom: '1px solid var(--border)' };
 
   return (
     <div style={{ maxWidth: 1160, margin: '0 auto', padding: '24px 20px' }}>
-
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontWeight: 700, fontSize: 22, letterSpacing: '-0.03em', marginBottom: 4 }}>Market Digest</h1>
           <div style={{ fontSize: 13, color: 'var(--text2)' }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            {!loading && <span style={{ marginLeft: 10, fontSize: 11, color: 'var(--text3)' }}>{allNews.length} articles loaded</span>}
           </div>
         </div>
         <button onClick={generateRecap} disabled={recapLoading || loading} style={{
@@ -242,7 +250,7 @@ WHAT TO WATCH TOMORROW
         </button>
       </div>
 
-      {/* DAILY RECAP — dismissable */}
+      {/* DAILY RECAP */}
       {showRecap && recap && (
         <div style={{ background: '#1a6b3c', borderRadius: 14, padding: '20px 22px', marginBottom: 20, color: '#fff', position: 'relative' }}>
           <button onClick={() => setShowRecap(false)} style={{
@@ -258,7 +266,6 @@ WHAT TO WATCH TOMORROW
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 18 }}>
-
         {/* LEFT — NEWS FEED */}
         <div>
           {/* FILTERS */}
@@ -287,113 +294,133 @@ WHAT TO WATCH TOMORROW
           {/* NEWS LIST */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {loading ? (
-              [0,1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 10 }} />)
+              [0,1,2,3,4,5,6,7].map(i => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 10 }} />)
             ) : filtered.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)', fontSize: 13 }}>No stories match your filters</div>
             ) : (
-              filtered.slice(0, 40).map((n, i) => {
-                const sent = sentimentFromHeadline(n.headline);
-                const sc = sentimentColor(sent);
-                const isExpanded = expandedIdx === i;
-                const fmt = citationFormat[i] || 'APA';
-
-                return (
-                  <div key={i} style={{ background: 'var(--surface)', border: `1px solid ${isExpanded ? '#1a6b3c' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden', transition: 'border-color .12s' }}>
-                    {/* ARTICLE ROW */}
-                    <div
-                      onClick={() => toggleExpand(i)}
-                      style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', cursor: 'pointer' }}
-                      onMouseOver={e => (e.currentTarget.style.background = 'var(--surface2)')}
-                      onMouseOut={e => (e.currentTarget.style.background = '')}
-                    >
-                      <div style={{ width: 3, borderRadius: 2, background: sc.color, flexShrink: 0, alignSelf: 'stretch', minHeight: 36 }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', lineHeight: 1.45, marginBottom: 5 }}>{n.headline}</div>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 700, color: '#1a6b3c', background: 'var(--green-light)', padding: '1px 6px', borderRadius: 4 }}>{n.ticker}</span>
-                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{n.source}</span>
-                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{timeAgo(n.datetime)}</span>
-                          <span style={{ fontSize: 10, fontWeight: 500, padding: '1px 7px', borderRadius: 20, ...sc }}>{sent}</span>
+              <>
+                {visible.map((n, i) => {
+                  const sent = sentimentFromHeadline(n.headline);
+                  const sc = sentimentColor(sent);
+                  const isExpanded = expandedIdx === i;
+                  const fmt = citationFormat[i] || 'APA';
+                  return (
+                    <div key={`${n.headline}-${i}`} style={{ background: 'var(--surface)', border: `1px solid ${isExpanded ? '#1a6b3c' : 'var(--border)'}`, borderRadius: 10, overflow: 'hidden', transition: 'border-color .12s' }}>
+                      {/* ARTICLE ROW */}
+                      <div onClick={() => setExpandedIdx(prev => prev === i ? null : i)} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', cursor: 'pointer' }}
+                        onMouseOver={e => (e.currentTarget.style.background = 'var(--surface2)')}
+                        onMouseOut={e => (e.currentTarget.style.background = '')}
+                      >
+                        <div style={{ width: 3, borderRadius: 2, background: sc.color, flexShrink: 0, alignSelf: 'stretch', minHeight: 36 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', lineHeight: 1.45, marginBottom: 5 }}>{n.headline}</div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 700, color: '#1a6b3c', background: 'var(--green-light)', padding: '1px 6px', borderRadius: 4 }}>{n.ticker}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{n.source}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{timeAgo(n.datetime)}</span>
+                            <span style={{ fontSize: 10, fontWeight: 500, padding: '1px 7px', borderRadius: 20, ...sc }}>{sent}</span>
+                          </div>
                         </div>
+                        <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0, marginTop: 2 }}>{isExpanded ? '▲' : '▼'}</span>
                       </div>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0, marginTop: 2 }}>{isExpanded ? '▲' : '▼'}</span>
+
+                      {/* EXPANDED PANEL */}
+                      {isExpanded && (
+                        <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', background: 'var(--surface2)' }}>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                            <button onClick={() => handleSummarize(i, n)} disabled={summaryLoading[i]} style={{
+                              padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1a6b3c',
+                              color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: summaryLoading[i] ? 'not-allowed' : 'pointer', opacity: summaryLoading[i] ? .7 : 1,
+                            }}>{summaryLoading[i] ? '⏳ Fetching...' : '✦ Summarize Article'}</button>
+                            <a href={n.url} target="_blank" style={{
+                              padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
+                              background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
+                              fontSize: 12, fontWeight: 500, cursor: 'pointer', textDecoration: 'none',
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                            }}>↗ Open Article</a>
+                            <button onClick={() => setShowCitation(prev => ({ ...prev, [i]: !prev[i] }))} style={{
+                              padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
+                              background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
+                              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                            }}>📎 Cite</button>
+                            <button onClick={() => { setSearch(n.ticker); setExpandedIdx(null); }} style={{
+                              padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
+                              background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
+                              fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                            }}>🔍 More from {n.ticker}</button>
+                          </div>
+
+                          {/* REAL SUMMARY */}
+                          {summaryLoading[i] && (
+                            <div style={{ padding: '14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 10 }}>
+                              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>Fetching and analyzing article content...</div>
+                              <div className="skeleton" style={{ height: 12, width: '90%', marginBottom: 6 }} />
+                              <div className="skeleton" style={{ height: 12, width: '75%', marginBottom: 6 }} />
+                              <div className="skeleton" style={{ height: 12, width: '85%' }} />
+                            </div>
+                          )}
+                          {summaries[i] && (
+                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#1a6b3c', marginBottom: 8 }}>
+                                Article Summary
+                              </div>
+                              <pre style={{ fontFamily: 'inherit', fontSize: 12, lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0, color: 'var(--text)' }}>{summaries[i]}</pre>
+                            </div>
+                          )}
+
+                          {/* CITATION */}
+                          {showCitation[i] && (
+                            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Citation Format</div>
+                              <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                                {CITATION_FORMATS.map(f => (
+                                  <button key={f} onClick={() => setCitationFormat(prev => ({ ...prev, [i]: f }))} style={{
+                                    padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)',
+                                    background: fmt === f ? '#1a6b3c' : 'var(--surface2)',
+                                    color: fmt === f ? '#fff' : 'var(--text2)',
+                                    fontFamily: 'inherit', fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                                  }}>{f}</button>
+                                ))}
+                              </div>
+                              <div style={{ background: 'var(--surface2)', borderRadius: 6, padding: '10px 12px', fontSize: 11, color: 'var(--text)', lineHeight: 1.6, fontFamily: 'monospace', wordBreak: 'break-word', marginBottom: 8 }}>
+                                {generateCitation(n, fmt)}
+                              </div>
+                              <button onClick={() => handleCopy(i, n)} style={{
+                                padding: '5px 14px', borderRadius: 6, border: 'none',
+                                background: copied === i ? '#1a8c52' : '#1a6b3c',
+                                color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                              }}>{copied === i ? '✓ Copied!' : 'Copy Citation'}</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
 
-                    {/* EXPANDED PANEL */}
-                    {isExpanded && (
-                      <div style={{ borderTop: '1px solid var(--border)', padding: '12px 14px', background: 'var(--surface2)' }}>
-                        {/* ACTION BUTTONS */}
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                          <button onClick={() => handleSummarize(i, n)} style={{
-                            padding: '6px 14px', borderRadius: 6, border: 'none', background: '#1a6b3c',
-                            color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          }}>✦ Summarize</button>
-                          <a href={n.url} target="_blank" style={{
-                            padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
-                            background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
-                            fontSize: 12, fontWeight: 500, cursor: 'pointer', textDecoration: 'none',
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                          }}>↗ Open Article</a>
-                          <button onClick={() => setShowCitation(prev => ({ ...prev, [i]: !prev[i] }))} style={{
-                            padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
-                            background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
-                            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                          }}>📎 Cite Article</button>
-                          <button onClick={() => { setSearch(n.ticker); setExpandedIdx(null); }} style={{
-                            padding: '6px 14px', borderRadius: 6, border: '1px solid var(--border)',
-                            background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
-                            fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                          }}>🔍 More from {n.ticker}</button>
-                        </div>
-
-                        {/* SUMMARY */}
-                        {summaries[i] && (
-                          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#1a6b3c', marginBottom: 8 }}>AI Summary</div>
-                            <pre style={{ fontFamily: 'inherit', fontSize: 12, lineHeight: 1.75, whiteSpace: 'pre-wrap', margin: 0, color: 'var(--text)' }}>{summaries[i]}</pre>
-                            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 8 }}>Generated from headline · Not financial advice</div>
-                          </div>
-                        )}
-
-                        {/* CITATION */}
-                        {showCitation[i] && (
-                          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Citation Format</div>
-                            <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-                              {CITATION_FORMATS.map(f => (
-                                <button key={f} onClick={() => setCitationFormat(prev => ({ ...prev, [i]: f }))} style={{
-                                  padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)',
-                                  background: fmt === f ? '#1a6b3c' : 'var(--surface2)',
-                                  color: fmt === f ? '#fff' : 'var(--text2)',
-                                  fontFamily: 'inherit', fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                                }}>{f}</button>
-                              ))}
-                            </div>
-                            <div style={{ background: 'var(--surface2)', borderRadius: 6, padding: '10px 12px', fontSize: 11, color: 'var(--text)', lineHeight: 1.6, fontFamily: 'monospace', wordBreak: 'break-word', marginBottom: 8 }}>
-                              {generateCitation(n, fmt)}
-                            </div>
-                            <button onClick={() => handleCopy(i, n)} style={{
-                              padding: '5px 14px', borderRadius: 6, border: 'none',
-                              background: copied === i ? '#1a8c52' : '#1a6b3c',
-                              color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                            }}>{copied === i ? '✓ Copied!' : 'Copy Citation'}</button>
-                          </div>
-                        )}
+                {/* INFINITE SCROLL LOADER */}
+                <div ref={loaderRef} style={{ padding: '16px 0', textAlign: 'center' }}>
+                  {hasMore ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="skeleton" style={{ height: 72, borderRadius: 10 }} />
+                      <div className="skeleton" style={{ height: 72, borderRadius: 10 }} />
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+                        Showing {visible.length} of {filtered.length} articles · scroll for more
                       </div>
-                    )}
-                  </div>
-                );
-              })
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: 'var(--text3)', padding: '8px 0' }}>
+                      All {filtered.length} articles loaded · via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub ↗</a>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
-          </div>
-          <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text3)' }}>
-            Real news via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub ↗</a> · Last 7 days
           </div>
         </div>
 
         {/* RIGHT SIDEBAR */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
           {/* CONCEPT OF THE DAY */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid #1a6b3c', borderRadius: 14, padding: '16px 18px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#1a6b3c', marginBottom: 8 }}>💡 Concept of the Day</div>
@@ -421,7 +448,6 @@ WHAT TO WATCH TOMORROW
                 {searchLoading ? '...' : 'Go'}
               </button>
             </div>
-
             {searchDetail?.profile && (
               <div style={{ marginBottom: 12, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -434,21 +460,16 @@ WHAT TO WATCH TOMORROW
                 <div style={{ display: 'flex', gap: 10, fontSize: 11, color: 'var(--text3)' }}>
                   <span>Score: <strong style={{ color: '#1a6b3c' }}>{searchDetail.ecniveScore}/100</strong></span>
                   <span>Streak: <strong>{searchDetail.beatStreak}Q</strong></span>
-                  <span>Surprise: <strong style={{ color: searchDetail.avgSurprise >= 0 ? '#1a8c52' : '#c0392b' }}>{searchDetail.avgSurprise >= 0 ? '+' : ''}{searchDetail.avgSurprise}%</strong></span>
                 </div>
               </div>
             )}
-
             {searchNews.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
                 {searchNews.map((n: any, i: number) => {
                   const sent = sentimentFromHeadline(n.headline);
                   const sc = sentimentColor(sent);
                   return (
-                    <a key={i} href={n.url} target="_blank" style={{
-                      textDecoration: 'none', padding: '8px 10px', border: '1px solid var(--border)',
-                      borderRadius: 8, display: 'block', transition: 'border-color .12s',
-                    }}
+                    <a key={i} href={n.url} target="_blank" style={{ textDecoration: 'none', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 8, display: 'block', transition: 'border-color .12s' }}
                       onMouseOver={e => (e.currentTarget.style.borderColor = '#1a6b3c')}
                       onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--border)')}
                     >
@@ -462,7 +483,6 @@ WHAT TO WATCH TOMORROW
                 })}
               </div>
             )}
-
             {!searchLoading && !searchDetail && (
               <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '12px 0' }}>
                 Enter a ticker to see recent news and data
@@ -475,22 +495,18 @@ WHAT TO WATCH TOMORROW
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>🔥 Trending Topics</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {['Federal Reserve rates', 'S&P 500 earnings season', 'AI semiconductor demand', 'Consumer spending trends', 'Oil and energy markets', 'Inflation and CPI data'].map((t, i) => (
-                <div key={i} onClick={() => setSearch(t)} style={{
-                  padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)',
-                  fontSize: 12, color: 'var(--text2)', cursor: 'pointer', transition: 'all .12s',
-                }}
+                <div key={i} onClick={() => setSearch(t)} style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 12, color: 'var(--text2)', cursor: 'pointer', transition: 'all .12s' }}
                   onMouseOver={e => { e.currentTarget.style.borderColor = '#1a6b3c'; e.currentTarget.style.color = '#1a6b3c'; }}
                   onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)'; }}
                 >{t}</div>
               ))}
             </div>
           </div>
-
         </div>
       </div>
 
       <div style={{ marginTop: 20, padding: '10px 14px', background: 'var(--gold-light)', border: '1px solid #e6c97a', borderRadius: 8, fontSize: 11, color: 'var(--text2)' }}>
-        ⚠ <strong>Not financial advice.</strong> News and analysis are for educational purposes only. Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub ↗</a>
+        ⚠ <strong>Not financial advice.</strong> News and summaries are for educational purposes only. Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub ↗</a>
       </div>
     </div>
   );
