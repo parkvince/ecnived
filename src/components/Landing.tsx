@@ -76,8 +76,7 @@ function TickerBadge({ sym, price, change }: { sym: string; price: string; chang
   );
 }
 
-export default function Landing({ onEnter }: { onEnter: () => void }) {
-  const [tickers, setTickers] = useState<any[]>([]);
+export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; onNavigate: (tab: string) => void }) {  const [tickers, setTickers] = useState<any[]>([]);
   const [activeSignal, setActiveSignal] = useState(0);
 
   useEffect(() => {
@@ -121,7 +120,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
             onMouseOver={e => (e.currentTarget.style.color = '#1a6b3c')}
             onMouseOut={e => (e.currentTarget.style.color = 'var(--text2)')}
           >Features</a>
-          <button onClick={onEnter} style={{
+          <button onClick={() => onNavigate('Dashboard')} style={{
             padding: '7px 20px', borderRadius: 8, border: 'none',
             background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -174,22 +173,22 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
-          <button onClick={onEnter} style={{
-            padding: '15px 36px', borderRadius: 10, border: 'none',
-            background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
-            fontSize: 16, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
-            boxShadow: '0 4px 20px rgba(26,107,60,.25)',
-          }}>
-            Open Dashboard →
-          </button>
-          <button onClick={onEnter} style={{
-            padding: '15px 36px', borderRadius: 10,
-            border: '1px solid var(--border)', background: 'var(--surface)',
-            color: 'var(--text)', fontFamily: 'inherit',
-            fontSize: 16, fontWeight: 500, cursor: 'pointer',
-          }}>
-            View Screener
-          </button>
+          <button onClick={() => onNavigate('Dashboard')} style={{
+    padding: '15px 36px', borderRadius: 10, border: 'none',
+    background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
+    fontSize: 16, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
+    boxShadow: '0 4px 20px rgba(26,107,60,.25)',
+  }}>
+    Open Dashboard →
+  </button>
+  <button onClick={() => onNavigate('Screener')} style={{
+    padding: '15px 36px', borderRadius: 10,
+    border: '1px solid var(--border)', background: 'var(--surface)',
+    color: 'var(--text)', fontFamily: 'inherit',
+    fontSize: 16, fontWeight: 500, cursor: 'pointer',
+  }}>
+    View Screener
+  </button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
           Free · No account required · No credit card
@@ -306,7 +305,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
             {FEATURES.map((f, i) => (
-              <div key={i} onClick={onEnter} style={{
+              <div key={i} onClick={() => onNavigate(['Dashboard','Screener','Lab','Digest','Portfolio','Digest'][i])} style={{
                 background: 'var(--bg)', border: '1px solid var(--border)',
                 borderRadius: 14, padding: '24px 22px', cursor: 'pointer',
                 transition: 'border-color .15s, box-shadow .15s, transform .15s',
@@ -334,7 +333,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <p style={{ fontSize: 16, color: 'var(--text2)', marginBottom: 36, lineHeight: 1.6 }}>
           No sign-up. No credit card. Built with real market data.
         </p>
-        <button onClick={onEnter} style={{
+        <button onClick={() => onNavigate('Dashboard')} style={{
           padding: '18px 48px', borderRadius: 12, border: 'none',
           background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
           fontSize: 18, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
@@ -349,11 +348,11 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
 
       {/* FOOTER */}
       <div style={{ borderTop: '1px solid var(--border)', padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: 'var(--text3)' }}>ecnived</span>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
-        </span>
-      </div>
+  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: 'var(--text3)' }}>ecnived</span>
+  <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+    Built by <strong style={{ color: 'var(--text)' }}>Vince Park</strong> · Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
+  </span>
+</div>
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </div>

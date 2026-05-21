@@ -9,7 +9,7 @@ interface NavProps {
   onHome: () => void;
 }
 
-const TABS = ['Dashboard', 'Digest', 'Screener', 'Radar', 'Lab', 'Portfolio'];
+const TABS = ['Dashboard', 'Digest', 'Screener', 'Radar', 'Lab', 'Portfolio', 'About'];
 
 function Logo() {
   return (
