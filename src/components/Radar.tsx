@@ -18,6 +18,12 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
   const [news, setNews] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [expandedNews, setExpandedNews] = useState<number | null>(null);
+  const [newsSums, setNewsSums] = useState<Record<number, string>>({});
+  const [newsSumLoading, setNewsSumLoading] = useState<Record<number, boolean>>({});
+  const [showCite, setShowCite] = useState<Record<number, boolean>>({});
+  const [citationFmt, setCitationFmt] = useState<Record<number, string>>({});
+  const [copied, setCopied] = useState<number | null>(null);
 
   useEffect(() => {
     const allSyms = CALENDAR.flatMap(d => d.stocks.map(s => s.sym));
@@ -35,6 +41,11 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
     setDetailLoading(true);
     setDetail(null);
     setNews([]);
+    setExpandedNews(null);
+    setNewsSums({});
+    setNewsSumLoading({});
+    setShowCite({});
+    setCitationFmt({});
     try {
       const [quoteRes, newsRes] = await Promise.all([
         fetch(`/api/quote?symbol=${sym}`).then(r => r.json()),
@@ -53,6 +64,41 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
   const td: React.CSSProperties = {
     padding: '9px 10px', borderBottom: '1px solid var(--border)', fontSize: 12, verticalAlign: 'middle',
   };
+
+async function handleNewsSum(idx: number, article: any) {
+    if (newsSums[idx]) return;
+    setNewsSumLoading(prev => ({ ...prev, [idx]: true }));
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: article.url, headline: article.headline, source: article.source }),
+      });
+      const data = await res.json();
+      setNewsSums(prev => ({ ...prev, [idx]: data.summary }));
+    } catch {
+      setNewsSums(prev => ({ ...prev, [idx]: 'Could not load summary. Try opening the article directly.' }));
+    }
+    setNewsSumLoading(prev => ({ ...prev, [idx]: false }));
+  }
+
+  function generateCitation(article: any, format: string): string {
+    const author = article.source || 'Unknown';
+    const title = article.headline || 'Untitled';
+    const url = article.url || '';
+    const date = article.datetime ? new Date(article.datetime * 1000) : new Date();
+    const year = date.getFullYear();
+    const fullDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const accessDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    switch (format) {
+      case 'APA': return `${author}. (${year}). ${title}. Retrieved ${accessDate}, from ${url}`;
+      case 'MLA': return `"${title}." ${author}, ${fullDate}, ${url}. Accessed ${accessDate}.`;
+      case 'Chicago': return `${author}. "${title}." ${fullDate}. ${url}.`;
+      case 'AMA': return `${author}. ${title}. Published ${fullDate}. Accessed ${accessDate}. ${url}`;
+      case 'Harvard': return `${author} (${year}) '${title}', ${fullDate}. Available at: ${url}`;
+      default: return `${author}. "${title}." ${fullDate}.`;
+    }
+  }
 
   return (
     <div style={{ maxWidth: 1160, margin: '0 auto', padding: '24px 20px' }}>
@@ -208,39 +254,110 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
                 </div>
               )}
 
-              {/* NEWS */}
-              {news.length > 0 && (
-                <div style={{ marginBottom: 22 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
-                    Latest News
-                    <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8 }}>via Finnhub · last 7 days</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {news.slice(0, 8).map((n: any, i: number) => (
-                      <a key={i} href={n.url} target="_blank" style={{
-                        textDecoration: 'none', display: 'flex', justifyContent: 'space-between',
-                        alignItems: 'flex-start', gap: 10, padding: '9px 11px',
-                        border: '1px solid var(--border)', borderRadius: 8, transition: 'border-color .12s',
-                      }}
-                        onMouseOver={e => (e.currentTarget.style.borderColor = '#1a6b3c')}
-                        onMouseOut={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', lineHeight: 1.4 }}>{n.headline}</div>
-                          <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 3 }}>
-                            {n.source} · {new Date(n.datetime * 1000).toLocaleDateString()}
-                          </div>
+                    {/* NEWS */}
+        {news.length > 0 && (
+          <div style={{ marginBottom: 22 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+              Latest News
+              <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 8 }}>via Finnhub · last 7 days</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {news.slice(0, 8).map((n: any, i: number) => {
+                const sentColor = n.sentiment === 'Positive'
+                  ? { bg: 'var(--green-light)', color: '#1a6b3c' }
+                  : n.sentiment === 'Negative'
+                  ? { bg: 'var(--red-light)', color: '#c0392b' }
+                  : { bg: 'var(--surface2)', color: 'var(--text2)' };
+                const isOpen = expandedNews === i;
+                const fmt = citationFmt[i] || 'APA';
+                return (
+                  <div key={i} style={{ border: `1px solid ${isOpen ? '#1a6b3c' : 'var(--border)'}`, borderRadius: 8, overflow: 'hidden', transition: 'border-color .12s' }}>
+                    {/* ROW */}
+                    <div onClick={() => setExpandedNews(prev => prev === i ? null : i)} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '9px 11px', cursor: 'pointer' }}
+                      onMouseOver={e => (e.currentTarget.style.background = 'var(--surface2)')}
+                      onMouseOut={e => (e.currentTarget.style.background = '')}
+                    >
+                      <div style={{ width: 3, borderRadius: 2, background: sentColor.color, flexShrink: 0, alignSelf: 'stretch', minHeight: 32 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', lineHeight: 1.4, marginBottom: 4 }}>{n.headline}</div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontSize: 10, color: 'var(--text3)' }}>{n.source} · {new Date(n.datetime * 1000).toLocaleDateString()}</span>
+                          <span style={{ fontSize: 10, fontWeight: 500, padding: '1px 7px', borderRadius: 20, background: sentColor.bg, color: sentColor.color }}>{n.sentiment}</span>
                         </div>
-                        <span style={{
-                          flexShrink: 0, padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 500,
-                          background: n.sentiment === 'Positive' ? 'var(--green-light)' : n.sentiment === 'Negative' ? 'var(--red-light)' : 'var(--surface2)',
-                          color: n.sentiment === 'Positive' ? '#1a6b3c' : n.sentiment === 'Negative' ? '#c0392b' : 'var(--text2)',
-                        }}>{n.sentiment}</span>
-                      </a>
-                    ))}
+                      </div>
+                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
+                    </div>
+
+                    {/* EXPANDED */}
+                    {isOpen && (
+                      <div style={{ borderTop: '1px solid var(--border)', padding: '10px 12px', background: 'var(--surface2)' }}>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                          <button onClick={() => handleNewsSum(i, n)} disabled={!!newsSumLoading[i]} style={{
+                            padding: '5px 12px', borderRadius: 6, border: 'none', background: '#1a6b3c',
+                            color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+                            cursor: newsSumLoading[i] ? 'not-allowed' : 'pointer', opacity: newsSumLoading[i] ? .7 : 1,
+                          }}>{newsSumLoading[i] ? '⏳ Fetching...' : '✦ Summarize'}</button>
+                          <a href={n.url} target="_blank" style={{
+                            padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)',
+                            background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
+                            fontSize: 12, fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
+                          }}>↗ Open Article</a>
+                          <button onClick={() => setShowCite(prev => ({ ...prev, [i]: !prev[i] }))} style={{
+                            padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)',
+                            background: 'var(--surface)', color: 'var(--text2)', fontFamily: 'inherit',
+                            fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                          }}>📎 Cite</button>
+                        </div>
+
+                        {/* SUMMARY SKELETON */}
+                        {newsSumLoading[i] && (
+                          <div style={{ padding: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8 }}>
+                            <div className="skeleton" style={{ height: 11, width: '90%', marginBottom: 6 }} />
+                            <div className="skeleton" style={{ height: 11, width: '75%', marginBottom: 6 }} />
+                            <div className="skeleton" style={{ height: 11, width: '85%' }} />
+                          </div>
+                        )}
+
+                        {/* SUMMARY */}
+                        {newsSums[i] && (
+                          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 8 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: '#1a6b3c', marginBottom: 6 }}>Summary</div>
+                            <pre style={{ fontFamily: 'inherit', fontSize: 12, lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0, color: 'var(--text)' }}>{newsSums[i]}</pre>
+                          </div>
+                        )}
+
+                        {/* CITATION */}
+                        {showCite[i] && (
+                          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Citation Format</div>
+                            <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap' }}>
+                              {['APA','MLA','Chicago','AMA','Harvard'].map(f => (
+                                <button key={f} onClick={() => setCitationFmt(prev => ({ ...prev, [i]: f }))} style={{
+                                  padding: '2px 9px', borderRadius: 20, border: '1px solid var(--border)',
+                                  background: fmt === f ? '#1a6b3c' : 'var(--surface2)',
+                                  color: fmt === f ? '#fff' : 'var(--text2)',
+                                  fontFamily: 'inherit', fontSize: 11, cursor: 'pointer',
+                                }}>{f}</button>
+                              ))}
+                            </div>
+                            <div style={{ background: 'var(--surface2)', borderRadius: 6, padding: '8px 10px', fontSize: 11, fontFamily: 'monospace', color: 'var(--text)', wordBreak: 'break-word', marginBottom: 8, lineHeight: 1.6 }}>
+                              {generateCitation(n, fmt)}
+                            </div>
+                            <button onClick={() => { navigator.clipboard.writeText(generateCitation(n, fmt)); setCopied(i); setTimeout(() => setCopied(null), 2000); }} style={{
+                              padding: '4px 12px', borderRadius: 6, border: 'none',
+                              background: copied === i ? '#1a8c52' : '#1a6b3c',
+                              color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                            }}>{copied === i ? '✓ Copied!' : 'Copy'}</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })}
+            </div>
+          </div>
+        )}
 
               {/* PREDICTION CARD */}
               <div style={{
