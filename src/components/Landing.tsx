@@ -7,36 +7,42 @@ const FEATURES = [
     title: 'Earnings Radar',
     desc: 'Real EPS history, beat streaks, analyst estimates, and earnings predictions powered by a 9-signal quantitative formula.',
     tag: 'Core Feature',
+    tab: 'Radar',
   },
   {
     icon: '🔍',
     title: 'Stock Screener',
     desc: 'Filter 25+ stocks and ETFs by sector, sentiment, beat streak, and short interest. Interactive price charts with full timeframe history.',
     tag: 'Live Data',
+    tab: 'Screener',
   },
   {
     icon: '🧠',
     title: 'Sentiment Lab',
     desc: 'AI-powered analysis built from real Finnhub news data. Bullish catalysts, bearish risks, and a forward outlook for any ticker.',
     tag: 'AI-Powered',
+    tab: 'Lab',
   },
   {
     icon: '📰',
     title: 'Market Digest',
     desc: 'Infinite scroll news feed from 15 tickers. Real article summarization, academic citations in 5 formats, and daily market recaps.',
     tag: 'Education',
+    tab: 'Digest',
   },
   {
     icon: '💼',
     title: 'Portfolio Tracker',
     desc: 'Track real P&L with live prices. Sector allocation, risk scoring, inline price charts per holding, and CSV export.',
     tag: 'Persistent',
+    tab: 'Portfolio',
   },
   {
     icon: '💡',
     title: 'Finance 101',
     desc: '15 rotating financial concepts explained in plain English — from P/E ratios to short squeezes. Built for first-time investors.',
     tag: 'Learn',
+    tab: 'Digest',
   },
 ];
 
@@ -65,7 +71,7 @@ function TickerBadge({ sym, price, change }: { sym: string; price: string; chang
       display: 'inline-flex', alignItems: 'center', gap: 8,
       padding: '6px 14px', borderRadius: 20,
       background: 'var(--surface)', border: '1px solid var(--border)',
-      fontSize: 12,
+      fontSize: 12, flexShrink: 0,
     }}>
       <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--text)' }}>{sym}</span>
       <span style={{ fontFamily: 'monospace', color: 'var(--text2)' }}>{price}</span>
@@ -76,7 +82,8 @@ function TickerBadge({ sym, price, change }: { sym: string; price: string; chang
   );
 }
 
-export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; onNavigate: (tab: string) => void }) {  const [tickers, setTickers] = useState<any[]>([]);
+export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; onNavigate: (tab: string) => void }) {
+  const [tickers, setTickers] = useState<any[]>([]);
   const [activeSignal, setActiveSignal] = useState(0);
 
   useEffect(() => {
@@ -174,21 +181,21 @@ export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; 
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
           <button onClick={() => onNavigate('Dashboard')} style={{
-    padding: '15px 36px', borderRadius: 10, border: 'none',
-    background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
-    fontSize: 16, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
-    boxShadow: '0 4px 20px rgba(26,107,60,.25)',
-  }}>
-    Open Dashboard →
-  </button>
-  <button onClick={() => onNavigate('Screener')} style={{
-    padding: '15px 36px', borderRadius: 10,
-    border: '1px solid var(--border)', background: 'var(--surface)',
-    color: 'var(--text)', fontFamily: 'inherit',
-    fontSize: 16, fontWeight: 500, cursor: 'pointer',
-  }}>
-    View Screener
-  </button>
+            padding: '15px 36px', borderRadius: 10, border: 'none',
+            background: '#1a6b3c', color: '#fff', fontFamily: 'inherit',
+            fontSize: 16, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em',
+            boxShadow: '0 4px 20px rgba(26,107,60,.25)',
+          }}>
+            Open Dashboard →
+          </button>
+          <button onClick={() => onNavigate('Screener')} style={{
+            padding: '15px 36px', borderRadius: 10,
+            border: '1px solid var(--border)', background: 'var(--surface)',
+            color: 'var(--text)', fontFamily: 'inherit',
+            fontSize: 16, fontWeight: 500, cursor: 'pointer',
+          }}>
+            View Screener
+          </button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text3)' }}>
           Free · No account required · No credit card
@@ -305,7 +312,7 @@ export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; 
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
             {FEATURES.map((f, i) => (
-              <div key={i} onClick={() => onNavigate(['Dashboard','Screener','Lab','Digest','Portfolio','Digest'][i])} style={{
+              <div key={i} onClick={() => onNavigate(f.tab)} style={{
                 background: 'var(--bg)', border: '1px solid var(--border)',
                 borderRadius: 14, padding: '24px 22px', cursor: 'pointer',
                 transition: 'border-color .15s, box-shadow .15s, transform .15s',
@@ -348,11 +355,11 @@ export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; 
 
       {/* FOOTER */}
       <div style={{ borderTop: '1px solid var(--border)', padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-  <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: 'var(--text3)' }}>ecnived</span>
-  <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-    Built by <strong style={{ color: 'var(--text)' }}>Vince Park</strong> · Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
-  </span>
-</div>
+        <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: 'var(--text3)' }}>ecnived</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+          Built by <strong style={{ color: 'var(--text)' }}>Vince Park</strong> · Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
+        </span>
+      </div>
 
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}`}</style>
     </div>

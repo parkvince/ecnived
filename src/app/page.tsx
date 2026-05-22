@@ -18,7 +18,7 @@ export default function Home() {
   function refresh() { setRefreshKey(k => k + 1); }
 
 if (tab === 'Home') {
-  return <Landing onEnter={() => setTab('Dashboard')} onAbout={() => setTab('About')} />;
+  return <Landing onEnter={() => setTab('Dashboard')} onNavigate={setTab} onAbout={() => setTab('About')} />;
 }
 
 if (tab === 'About') {
