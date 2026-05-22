@@ -82,8 +82,7 @@ function TickerBadge({ sym, price, change }: { sym: string; price: string; chang
   );
 }
 
-export default function Landing({ onEnter, onNavigate }: { onEnter: () => void; onNavigate: (tab: string) => void }) {
-  const [tickers, setTickers] = useState<any[]>([]);
+export default function Landing({ onEnter, onNavigate, onAbout }: { onEnter: () => void; onNavigate: (tab: string) => void; onAbout?: () => void }) {  const [tickers, setTickers] = useState<any[]>([]);
   const [activeSignal, setActiveSignal] = useState(0);
 
   useEffect(() => {
