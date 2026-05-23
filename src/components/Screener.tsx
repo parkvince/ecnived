@@ -81,21 +81,24 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
     setDetailLoading(false);
   }
 
-  async function onSearchChange(v: string) {
+async function onSearchChange(v: string) {
     setSearch(v);
     if (!v) { setShowAc(false); return; }
     try {
       const res = await fetch(`/api/search?q=${v}`);
       const data = await res.json();
       setAcResults(data.result || []);
-      setShowAc(true);
+      setShowAc(data.result?.length > 0);
     } catch {}
   }
 
-  function pickAc(sym: string) {
+function pickAc(sym: string) {
     setSearch(sym);
     setShowAc(false);
     fetchDetail(sym);
+    setTimeout(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
   }
 
   function sortBy(col: string) {

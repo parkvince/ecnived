@@ -10,6 +10,7 @@ import Portfolio from '@/components/Portfolio';
 import Landing from '@/components/Landing';
 import Digest from '@/components/Digest';
 import About from '@/components/About';
+import MarketAlert from '@/components/MarketAlert';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
@@ -25,6 +26,7 @@ if (tab === 'About') {
   return (
     <>
       <Nav activeTab={tab} setActiveTab={setTab} onRefresh={refresh} onHome={() => setTab('Home')} />
+      <MarketAlert />
       <About onEnter={() => setTab('Dashboard')} />
     </>
   );
@@ -33,6 +35,7 @@ if (tab === 'About') {
   return (
     <>
       <Nav activeTab={tab} setActiveTab={setTab} onRefresh={refresh} onHome={() => setTab('Home')} />
+      <MarketAlert />
       <Ticker />
       {tab === 'Dashboard' && <Dashboard refreshKey={refreshKey} onNavigate={setTab} />}
       {tab === 'Screener' && <Screener refreshKey={refreshKey} />}

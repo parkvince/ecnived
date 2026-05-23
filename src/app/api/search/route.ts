@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
   try {
     const data = await searchSymbol(q);
     const results = (data?.result || [])
-      .filter((r: any) => r.type === 'Common Stock' && !r.symbol.includes('.'))
-      .slice(0, 8)
+      .filter((r: any) => (r.type === 'Common Stock' || r.type === 'ETP') && !r.symbol.includes('.'))
+      .slice(0, 10)
       .map((r: any) => ({
         symbol: r.symbol,
         description: r.description,
