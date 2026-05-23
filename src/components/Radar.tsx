@@ -4,13 +4,8 @@ import ScoreRing from './ScoreRing';
 import StockChart from './StockChart';
 import { scoreToProbability } from '@/lib/scores';
 
-const CALENDAR = [
-  { day: 'Mon', stocks: [{ sym: 'AAPL', eps: '$1.52', rev: '$90.3B' }, { sym: 'MSFT', eps: '$2.83', rev: '$60.9B' }] },
-  { day: 'Tue', stocks: [{ sym: 'META', eps: '$4.72', rev: '$36.4B' }, { sym: 'AMZN', eps: '$0.84', rev: '$143.1B' }] },
-  { day: 'Wed', stocks: [{ sym: 'NVDA', eps: '$5.59', rev: '$24.6B' }, { sym: 'AMD', eps: '$0.62', rev: '$5.3B' }] },
-  { day: 'Thu', stocks: [{ sym: 'JPM', eps: '$4.12', rev: '$42.3B' }, { sym: 'GS', eps: '$8.90', rev: '$12.4B' }] },
-  { day: 'Fri', stocks: [{ sym: 'V', eps: '$2.34', rev: '$8.9B' }, { sym: 'JNJ', eps: '$2.12', rev: '$21.8B' }] },
-];
+const DAY_KEYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 export default function Radar({ refreshKey }: { refreshKey: number }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -18,6 +13,8 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
   const [news, setNews] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [calendar, setCalendar] = useState<Record<string, any[]>>({});
+  const [calLoading, setCalLoading] = useState(true);
   const [expandedNews, setExpandedNews] = useState<number | null>(null);
   const [newsSums, setNewsSums] = useState<Record<number, string>>({});
   const [newsSumLoading, setNewsSumLoading] = useState<Record<number, boolean>>({});
@@ -26,14 +23,25 @@ export default function Radar({ refreshKey }: { refreshKey: number }) {
   const [copied, setCopied] = useState<number | null>(null);
 
   useEffect(() => {
-    const allSyms = CALENDAR.flatMap(d => d.stocks.map(s => s.sym));
-    allSyms.forEach(async sym => {
+    async function loadCalendar() {
+      setCalLoading(true);
       try {
-        const res = await fetch(`/api/quote?symbol=${sym}`);
+        const res = await fetch('/api/earnings');
         const data = await res.json();
-        setScores(prev => ({ ...prev, [sym]: data.ecniveScore || 50 }));
+        setCalendar(data.grouped || {});
+        // Load scores for all stocks in calendar
+        const allSyms = Object.values(data.grouped || {}).flat().map((s: any) => s.sym);
+        allSyms.forEach(async (sym: string) => {
+          try {
+            const res = await fetch(`/api/quote?symbol=${sym}`);
+            const d = await res.json();
+            setScores(prev => ({ ...prev, [sym]: d.ecniveScore || 50 }));
+          } catch {}
+        });
       } catch {}
-    });
+      setCalLoading(false);
+    }
+    loadCalendar();
   }, [refreshKey]);
 
   async function openDive(sym: string) {
@@ -106,41 +114,66 @@ async function handleNewsSum(idx: number, article: any) {
 
       {/* CALENDAR HEADER */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 0, marginBottom: 4 }}>
-        {CALENDAR.map(d => (
-          <div key={d.day} style={{
+        {DAY_SHORT.map((d, i) => (
+          <div key={d} style={{
             fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
             letterSpacing: '.07em', color: 'var(--text3)', textAlign: 'center',
             padding: '6px 0', borderBottom: '2px solid var(--border)',
-          }}>{d.day}</div>
+          }}>
+            {d}
+            {calendar[DAY_KEYS[i]]?.[0]?.date && (
+              <span style={{ marginLeft: 4, fontSize: 9, color: 'var(--text3)', fontWeight: 400 }}>
+                {new Date(calendar[DAY_KEYS[i]][0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+          </div>
         ))}
       </div>
 
       {/* CALENDAR GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 24 }}>
-        {CALENDAR.map(d => (
-          <div key={d.day} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {d.stocks.map(s => {
-              const sc = scores[s.sym] || 50;
-              return (
-                <div key={s.sym} onClick={() => openDive(s.sym)} style={{
-                  border: `1px solid ${selected === s.sym ? '#1a6b3c' : 'var(--border)'}`,
-                  background: selected === s.sym ? 'var(--green-light)' : 'var(--surface)',
-                  borderRadius: 8, padding: 10, cursor: 'pointer', transition: 'all .12s',
-                }}
-                  onMouseOver={e => { if (selected !== s.sym) e.currentTarget.style.borderColor = '#1a6b3c'; }}
-                  onMouseOut={e => { if (selected !== s.sym) e.currentTarget.style.borderColor = 'var(--border)'; }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{s.sym}</span>
-                    <ScoreRing score={sc} size={26} fontSize={10} />
+        {calLoading ? (
+          DAY_KEYS.map(d => (
+            <div key={d} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[0,1,2].map(i => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 8 }} />)}
+            </div>
+          ))
+        ) : (
+          DAY_KEYS.map(dayKey => {
+            const stocks = calendar[dayKey] || [];
+            return (
+              <div key={dayKey} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {stocks.length === 0 ? (
+                  <div style={{ padding: 10, border: '1px dashed var(--border)', borderRadius: 8, fontSize: 11, color: 'var(--text3)', textAlign: 'center' }}>
+                    No earnings
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>EPS: {s.eps}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Rev: {s.rev}</div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                ) : (
+                  stocks.slice(0, 6).map((s: any) => {
+                    const sc = scores[s.sym] || 50;
+                    return (
+                      <div key={s.sym} onClick={() => openDive(s.sym)} style={{
+                        border: `1px solid ${selected === s.sym ? '#1a6b3c' : 'var(--border)'}`,
+                        background: selected === s.sym ? 'var(--green-light)' : 'var(--surface)',
+                        borderRadius: 8, padding: 10, cursor: 'pointer', transition: 'all .12s',
+                      }}
+                        onMouseOver={e => { if (selected !== s.sym) e.currentTarget.style.borderColor = '#1a6b3c'; }}
+                        onMouseOut={e => { if (selected !== s.sym) e.currentTarget.style.borderColor = 'var(--border)'; }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14 }}>{s.sym}</span>
+                          <ScoreRing score={sc} size={26} fontSize={10} />
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>EPS est: {s.eps}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>Rev est: {s.rev}</div>
+                        {s.hour && <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 2 }}>{s.hour === 'bmo' ? '🌅 Pre-market' : s.hour === 'amc' ? '🌙 After hours' : ''}</div>}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* DEEP DIVE */}

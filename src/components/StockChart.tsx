@@ -57,6 +57,12 @@ export default function StockChart({ symbol }: { symbol: string }) {
     const lineColor = isPositive ? '#1a8c52' : '#c0392b';
     const fillColor = isPositive ? 'rgba(26,140,82,0.08)' : 'rgba(192,57,43,0.08)';
 
+    // Dark mode detection
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(128,128,128,0.08)';
+    const labelColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(128,128,128,0.55)';
+    const crosshairColor = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(128,128,128,0.35)';
+
     const xScale = (i: number) => pad.left + (i / (points.length - 1)) * chartW;
     const yScale = (p: number) => pad.top + chartH - ((p - min) / (max - min || 1)) * chartH;
 
@@ -64,13 +70,13 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
     // Grid lines
     const gridCount = 4;
-    ctx.strokeStyle = 'rgba(128,128,128,0.08)';
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     for (let i = 0; i <= gridCount; i++) {
       const y = pad.top + (i / gridCount) * chartH;
       ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
       const price = max - (i / gridCount) * (max - min);
-      ctx.fillStyle = 'rgba(128,128,128,0.55)';
+      ctx.fillStyle = labelColor;
       ctx.font = '10px monospace';
       ctx.textAlign = 'left';
       ctx.fillText('$' + price.toFixed(price > 100 ? 0 : 2), W - pad.right + 4, y + 4);
@@ -108,7 +114,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
 
     // X-axis labels
     const labelCount = Math.min(6, points.length);
-    ctx.fillStyle = 'rgba(128,128,128,0.6)';
+    ctx.fillStyle = labelColor;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
     for (let i = 0; i < labelCount; i++) {
@@ -127,7 +133,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
       const hy = yScale(hover.point.price);
       ctx.beginPath();
       ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = 'rgba(128,128,128,0.35)';
+      ctx.strokeStyle = crosshairColor;
       ctx.lineWidth = 1;
       ctx.moveTo(hx, pad.top); ctx.lineTo(hx, H - pad.bottom);
       ctx.moveTo(pad.left, hy); ctx.lineTo(W - pad.right, hy);
@@ -137,7 +143,7 @@ export default function StockChart({ symbol }: { symbol: string }) {
       ctx.arc(hx, hy, 4, 0, Math.PI * 2);
       ctx.fillStyle = lineColor;
       ctx.fill();
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = isDark ? '#1a1a1a' : '#fff';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
