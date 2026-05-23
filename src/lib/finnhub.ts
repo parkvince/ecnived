@@ -39,3 +39,13 @@ export async function searchSymbol(query: string) {
 export async function getRecommendationTrends(symbol: string) {
   try { return await get(`/stock/recommendation?symbol=${symbol}`); } catch { return []; }
 }
+
+export async function getEarningsCalendar() {
+  try {
+    const to = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+    const from = new Date().toISOString().split('T')[0];
+    return await get(`/calendar/earnings?from=${from}&to=${to}`);
+  } catch {
+    return { earningsCalendar: [] };
+  }
+}
