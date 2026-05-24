@@ -11,6 +11,7 @@ import Landing from '@/components/Landing';
 import Digest from '@/components/Digest';
 import About from '@/components/About';
 import MarketAlert from '@/components/MarketAlert';
+import Watchlist from '@/components/Watchlist';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
@@ -43,6 +44,7 @@ if (tab === 'About') {
       {tab === 'Lab' && <Lab />}
       {tab === 'Portfolio' && <Portfolio refreshKey={refreshKey} />}
       {tab === 'Digest' && <Digest />}
+      {tab === 'Watchlist' && <Watchlist refreshKey={refreshKey} />}
       <div style={{
   fontSize: 11, color: 'var(--text3)', textAlign: 'center',
   padding: '18px 20px', borderTop: '1px solid var(--border)', marginTop: 40, lineHeight: 1.7,
