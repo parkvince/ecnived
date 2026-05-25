@@ -12,6 +12,7 @@ import Digest from '@/components/Digest';
 import About from '@/components/About';
 import MarketAlert from '@/components/MarketAlert';
 import Watchlist from '@/components/Watchlist';
+import PriceAlerts from '@/components/PriceAlerts';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
