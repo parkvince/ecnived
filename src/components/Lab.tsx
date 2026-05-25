@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Lab() {
   const [ticker, setTicker] = useState('NVDA');
@@ -217,7 +217,54 @@ SENTIMENT SCORE: ${overallScore}/10`;
           </div>
         </div>
       )}
-
+      {/* SENTIMENT TIMELINE */}
+      {news.length > 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>
+            News Sentiment Breakdown — {ticker.toUpperCase()}
+            <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text3)' }}>last 7 days</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
+            {[
+              { label: 'Positive', count: news.filter(n => n.sentiment === 'Positive').length, color: '#1a6b3c', bg: 'var(--green-light)' },
+              { label: 'Neutral', count: news.filter(n => n.sentiment === 'Neutral').length, color: '#c9a84c', bg: 'var(--gold-light)' },
+              { label: 'Negative', count: news.filter(n => n.sentiment === 'Negative').length, color: '#c0392b', bg: 'var(--red-light)' },
+            ].map(({ label, count, color, bg }) => (
+              <div key={label} style={{ background: bg, borderRadius: 10, padding: '14px 16px', textAlign: 'center', border: `1px solid ${color}30` }}>
+                <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 800, color }}>{count}</div>
+                <div style={{ fontSize: 12, color, fontWeight: 600, marginTop: 4 }}>{label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                  {news.length > 0 ? Math.round(count / news.length * 100) : 0}% of stories
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {['Positive', 'Neutral', 'Negative'].map(label => {
+              const count = news.filter(n => n.sentiment === label).length;
+              const pct = news.length > 0 ? count / news.length * 100 : 0;
+              const color = label === 'Positive' ? '#1a6b3c' : label === 'Negative' ? '#c0392b' : '#c9a84c';
+              return (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 60, fontSize: 11, color: 'var(--text2)', flexShrink: 0 }}>{label}</span>
+                  <div style={{ flex: 1, height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width .5s' }} />
+                  </div>
+                  <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text3)', width: 36, textAlign: 'right' }}>{pct.toFixed(0)}%</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 8, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+            <strong>Overall: </strong>
+            {news.filter(n => n.sentiment === 'Positive').length > news.filter(n => n.sentiment === 'Negative').length
+              ? `News flow is net positive for ${ticker.toUpperCase()} — ${news.filter(n => n.sentiment === 'Positive').length} bullish stories vs ${news.filter(n => n.sentiment === 'Negative').length} bearish. This typically supports upward price pressure.`
+              : news.filter(n => n.sentiment === 'Negative').length > news.filter(n => n.sentiment === 'Positive').length
+              ? `News flow is net negative for ${ticker.toUpperCase()} — ${news.filter(n => n.sentiment === 'Negative').length} bearish stories vs ${news.filter(n => n.sentiment === 'Positive').length} bullish. This can weigh on price action heading into earnings.`
+              : `News flow is balanced for ${ticker.toUpperCase()} — mixed signals, no strong directional bias from headlines alone.`}
+          </div>
+        </div>
+      )}
       <div style={{ padding: '10px 14px', background: 'var(--gold-light)', border: '1px solid #e6c97a', borderRadius: 8, fontSize: 11, color: 'var(--text2)' }}>
         ⚠ <strong>Ecnived is not a registered investment advisor. This is not financial advice.</strong> Analysis uses real market data for educational purposes only.
       </div>

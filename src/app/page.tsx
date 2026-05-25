@@ -13,6 +13,7 @@ import About from '@/components/About';
 import MarketAlert from '@/components/MarketAlert';
 import Watchlist from '@/components/Watchlist';
 import PriceAlerts from '@/components/PriceAlerts';
+import Compare from '@/components/Compare';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
@@ -47,6 +48,7 @@ if (tab === 'About') {
       {tab === 'Digest' && <Digest />}
       {tab === 'Watchlist' && <Watchlist refreshKey={refreshKey} />}
       {tab === 'Alerts' && <PriceAlerts />}
+      {tab === 'Compare' && <Compare />}
       <div style={{
   fontSize: 11, color: 'var(--text3)', textAlign: 'center',
   padding: '18px 20px', borderTop: '1px solid var(--border)', marginTop: 40, lineHeight: 1.7,

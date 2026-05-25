@@ -372,6 +372,8 @@ function pickAc(sym: string) {
                     { col: 'beatStreak', label: 'Streak' },
                     { col: 'avgSurprise', label: 'Avg Surprise' },
                     { col: 'shortInterest', label: 'Short %' },
+                    { col: 'pe', label: 'P/E' },
+                    { col: 'mcap', label: 'Mkt Cap' },
                   ].map(({ col, label }) => (
                     <th key={col} onClick={() => sortBy(col)} style={th}>
                       {label}{sortCol === col ? (sortDir === -1 ? ' ↓' : ' ↑') : ''}
@@ -398,10 +400,12 @@ function pickAc(sym: string) {
                     <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.beatStreak}Q</span></td>
                     <td style={td}><span style={{ fontSize: 12, color: s.avgSurprise >= 0 ? '#1a8c52' : '#c0392b' }}>{s.avgSurprise >= 0 ? '+' : ''}{s.avgSurprise}%</span></td>
                     <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.shortInterest.toFixed(1)}%</span></td>
+                    <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.pe ? `${s.pe}x` : '—'}</span></td>
+                    <td style={td}><span style={{ fontFamily: 'monospace', fontSize: 12 }}>{s.mcap || '—'}</span></td>
                   </tr>
                 ))}
                 {sorted.length === 0 && (
-                  <tr><td colSpan={10} style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>No stocks match current filters</td></tr>
+                  <tr><td colSpan={12} style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>No stocks match current filters</td></tr>
                 )}
               </tbody>
             </table>
