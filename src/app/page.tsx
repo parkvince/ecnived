@@ -46,6 +46,7 @@ if (tab === 'About') {
       {tab === 'Portfolio' && <Portfolio refreshKey={refreshKey} />}
       {tab === 'Digest' && <Digest />}
       {tab === 'Watchlist' && <Watchlist refreshKey={refreshKey} />}
+      {tab === 'Alerts' && <PriceAlerts />}
       <div style={{
   fontSize: 11, color: 'var(--text3)', textAlign: 'center',
   padding: '18px 20px', borderTop: '1px solid var(--border)', marginTop: 40, lineHeight: 1.7,
