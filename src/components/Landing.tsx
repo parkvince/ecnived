@@ -356,7 +356,7 @@ export default function Landing({ onEnter, onNavigate, onAbout }: { onEnter: () 
       <div style={{ borderTop: '1px solid var(--border)', padding: '20px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 14, color: 'var(--text3)' }}>ecnived</span>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          Built by <strong style={{ color: 'var(--text)' }}>Vince Park</strong> · Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
+          Built by <strong style={{ color: 'var(--text)' }}>Vince, Ethan & Alex</strong> · Not financial advice · Data via <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub</a> · <a href="https://finance.yahoo.com" target="_blank" style={{ color: '#1a6b3c' }}>Yahoo Finance</a>
         </span>
       </div>
 
