@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'ecnived — Earnings Intelligence',
   description: 'AI-powered earnings surprise predictor and market sentiment platform. Real earnings history, quantitative scoring, live stock data.',
   keywords: 'earnings prediction, stock analysis, EPS beat, sentiment analysis, fintech',
-  authors: [{ name: 'Vince Park' }],
+  authors: [{ name: 'Vince, Ethan & Alex' }],
   openGraph: {
     title: 'ecnived — Earnings Intelligence',
     description: 'Predict earnings with a 9-signal quantitative formula. Real data. No guessing.',
