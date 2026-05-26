@@ -57,7 +57,7 @@ if (tab === 'About') {
   <strong>Not a registered investment advisor. This is not financial advice.</strong><br />
   Data: <a href="https://finnhub.io" target="_blank" style={{ color: '#1a6b3c' }}>Finnhub ↗</a> ·{' '}
   <a href="https://www.sec.gov" target="_blank" style={{ color: '#1a6b3c' }}>SEC EDGAR ↗</a><br />
-  <span style={{ marginTop: 4, display: 'inline-block' }}>Built by <strong style={{ color: 'var(--text)' }}>Vince Park</strong></span>
+  <span style={{ marginTop: 4, display: 'inline-block' }}>Built by <strong style={{ color: 'var(--text)' }}>Vince, Ethan & Alex</strong></span>
 </div>
     </>
   );
