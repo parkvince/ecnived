@@ -72,3 +72,32 @@ body {
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface2); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+@media (max-width: 768px) {
+  /* Nav */
+  nav { padding: 0 12px !important; }
+  nav span[style*="monospace"] { display: none; }
+
+  /* Grids */
+  .grid-3 { grid-template-columns: 1fr !important; }
+
+  /* Typography */
+  h1 { font-size: 18px !important; }
+
+  /* Tables — make them scroll */
+  table { font-size: 11px !important; }
+  th, td { padding: 6px 8px !important; }
+}
+
+/* Make all 3-col grids responsive */
+[style*="repeat(3,1fr)"] {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+[style*="repeat(4,1fr)"] {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+[style*="repeat(5,1fr)"] {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}

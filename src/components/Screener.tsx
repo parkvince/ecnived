@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import ScoreRing from './ScoreRing';
 import StockChart from './StockChart';
+import { trackSearch } from '@/components/Metrics';
 
 interface Stock {
   sym: string;
@@ -70,6 +71,7 @@ export default function Screener({ refreshKey }: { refreshKey: number }) {
   }
 
   async function fetchDetail(sym: string) {
+    trackSearch(sym);
     setDetailLoading(true);
     setSelected(null);
     try {

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import Feedback from './Feedback';
 
 export default function Lab() {
   const [ticker, setTicker] = useState('NVDA');
@@ -170,6 +171,9 @@ SENTIMENT SCORE: ${overallScore}/10`;
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--text)' }}>
               {formatResult(result)}
+            </div>
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+              <Feedback context={`lab-${ticker}`} label="Was this analysis useful?" />
             </div>
           </div>
         )}

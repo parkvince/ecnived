@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import ScoreRing from './ScoreRing';
 import StockChart from './StockChart';
 import { scoreToProbability } from '@/lib/scores';
+import Feedback from './Feedback';
 
 const DAY_KEYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -414,6 +415,9 @@ async function handleNewsSum(idx: number, article: any) {
                 </div>
                 <div style={{ marginTop: 10, fontSize: 10, opacity: .6 }}>
                   ⚠ Quantitative prediction based on historical patterns. Not financial advice. Ecnived is not a registered investment advisor.
+                </div>
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                  <Feedback context={`radar-${selected}`} label="Was this prediction helpful?" />
                 </div>
               </div>
             </>

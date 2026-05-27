@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Nav from '@/components/Nav';
 import Ticker from '@/components/Ticker';
 import Dashboard from '@/components/Dashboard';
@@ -14,12 +14,22 @@ import MarketAlert from '@/components/MarketAlert';
 import Watchlist from '@/components/Watchlist';
 import PriceAlerts from '@/components/PriceAlerts';
 import Compare from '@/components/Compare';
+import Metrics from '@/components/Metrics';
+import { trackSession, trackFeature } from '@/components/Metrics';
 
 export default function Home() {
   const [tab, setTab] = useState('Home');
   const [refreshKey, setRefreshKey] = useState(0);
 
   function refresh() { setRefreshKey(k => k + 1); }
+
+  useEffect(() => {
+    trackSession();
+  }, []);
+
+  useEffect(() => {
+    if (tab !== 'Home') trackFeature(tab);
+  }, [tab]);
 
 if (tab === 'Home') {
   return <Landing onEnter={() => setTab('Dashboard')} onNavigate={setTab} onAbout={() => setTab('About')} />;
@@ -49,6 +59,7 @@ if (tab === 'About') {
       {tab === 'Watchlist' && <Watchlist refreshKey={refreshKey} />}
       {tab === 'Alerts' && <PriceAlerts />}
       {tab === 'Compare' && <Compare />}
+      {tab === 'Metrics' && <Metrics />}
       <div style={{
   fontSize: 11, color: 'var(--text3)', textAlign: 'center',
   padding: '18px 20px', borderTop: '1px solid var(--border)', marginTop: 40, lineHeight: 1.7,

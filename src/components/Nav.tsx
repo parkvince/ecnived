@@ -10,7 +10,7 @@ interface NavProps {
 }
 
 const PRIMARY_TABS = ['Dashboard', 'Digest', 'Screener', 'Radar', 'Lab', 'Portfolio'];
-const MORE_TABS = ['Watchlist', 'Alerts', 'Compare', 'About'];
+const MORE_TABS = ['Watchlist', 'Alerts', 'Compare', 'Metrics', 'About'];
 
 function Logo() {
   return (
