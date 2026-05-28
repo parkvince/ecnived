@@ -238,6 +238,132 @@ async function handleNewsSum(idx: number, article: any) {
                   </div>
                 ))}
               </div>
+                
+              {/* PRE-EARNINGS CHECKLIST */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+                  Pre-Earnings Checklist
+                  <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text3)', fontWeight: 400 }}>6-factor setup score</span>
+                </div>
+                {(() => {
+                  const checks = [
+                    {
+                      label: 'Beat Streak',
+                      pass: detail.beatStreak >= 3,
+                      partial: detail.beatStreak >= 1,
+                      detail: detail.beatStreak >= 3
+                        ? `${detail.beatStreak} consecutive beats — strong execution pattern`
+                        : detail.beatStreak >= 1
+                        ? `${detail.beatStreak}Q streak — some consistency but limited history`
+                        : 'No recent beat streak — elevated miss risk',
+                    },
+                    {
+                      label: 'Avg EPS Surprise',
+                      pass: detail.avgSurprise >= 5,
+                      partial: detail.avgSurprise >= 0,
+                      detail: detail.avgSurprise >= 5
+                        ? `+${detail.avgSurprise}% average — management consistently under-promises`
+                        : detail.avgSurprise >= 0
+                        ? `+${detail.avgSurprise}% average — modest beats, guidance may be tight`
+                        : `${detail.avgSurprise}% average — history of disappointing vs estimates`,
+                    },
+                    {
+                      label: 'Short Interest',
+                      pass: detail.shortInterest < 3,
+                      partial: detail.shortInterest < 7,
+                      detail: detail.shortInterest < 3
+                        ? `${detail.shortInterest?.toFixed(1)}% short float — minimal bearish positioning`
+                        : detail.shortInterest < 7
+                        ? `${detail.shortInterest?.toFixed(1)}% short float — moderate skepticism, squeeze possible on beat`
+                        : `${detail.shortInterest?.toFixed(1)}% short float — heavily shorted, informed bears may know something`,
+                    },
+                    {
+                      label: 'Revenue Growth',
+                      pass: detail.revenueGrowth >= 10,
+                      partial: detail.revenueGrowth >= 0,
+                      detail: detail.revenueGrowth >= 10
+                        ? `+${detail.revenueGrowth?.toFixed(1)}% YoY — strong top-line momentum`
+                        : detail.revenueGrowth >= 0
+                        ? `+${detail.revenueGrowth?.toFixed(1)}% YoY — growing but slowly`
+                        : `${detail.revenueGrowth?.toFixed(1)}% YoY — declining revenue is a red flag`,
+                    },
+                    {
+                      label: 'Ecnived Score',
+                      pass: detail.ecniveScore >= 70,
+                      partial: detail.ecniveScore >= 50,
+                      detail: detail.ecniveScore >= 70
+                        ? `${detail.ecniveScore}/100 — strong multi-signal setup`
+                        : detail.ecniveScore >= 50
+                        ? `${detail.ecniveScore}/100 — neutral setup, no strong edge`
+                        : `${detail.ecniveScore}/100 — weak setup across multiple signals`,
+                    },
+                    {
+                      label: 'News Sentiment',
+                      pass: news.filter((n: any) => n.sentiment === 'Positive').length > news.filter((n: any) => n.sentiment === 'Negative').length,
+                      partial: news.filter((n: any) => n.sentiment === 'Positive').length === news.filter((n: any) => n.sentiment === 'Negative').length,
+                      detail: news.length === 0
+                        ? 'No recent news — no sentiment signal available'
+                        : news.filter((n: any) => n.sentiment === 'Positive').length > news.filter((n: any) => n.sentiment === 'Negative').length
+                        ? `${news.filter((n: any) => n.sentiment === 'Positive').length} positive vs ${news.filter((n: any) => n.sentiment === 'Negative').length} negative headlines this week`
+                        : `${news.filter((n: any) => n.sentiment === 'Negative').length} negative vs ${news.filter((n: any) => n.sentiment === 'Positive').length} positive headlines — bearish news flow`,
+                    },
+                  ];
+
+                  const passed = checks.filter(c => c.pass).length;
+                  const partial = checks.filter(c => !c.pass && c.partial).length;
+                  const score = passed + partial * 0.5;
+                  const pct = Math.round((score / checks.length) * 100);
+                  const signal = pct >= 70 ? 'GO' : pct >= 45 ? 'CAUTION' : 'WAIT';
+                  const signalColor = signal === 'GO' ? '#1a6b3c' : signal === 'CAUTION' ? '#c9a84c' : '#c0392b';
+                  const signalBg = signal === 'GO' ? 'var(--green-light)' : signal === 'CAUTION' ? 'var(--gold-light)' : 'var(--red-light)';
+
+                  return (
+                    <div>
+                      {/* OVERALL SIGNAL */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: signalBg, borderRadius: 10, border: `1px solid ${signalColor}40`, marginBottom: 14 }}>
+                        <div style={{ fontFamily: 'monospace', fontSize: 28, fontWeight: 800, color: signalColor }}>{signal}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: signalColor, marginBottom: 3 }}>
+                            {signal === 'GO' ? 'Setup looks favorable heading into earnings' : signal === 'CAUTION' ? 'Mixed signals — approach with defined risk' : 'Weak setup — consider waiting for better entry'}
+                          </div>
+                          <div style={{ fontSize: 11, color: 'var(--text2)' }}>
+                            {passed} of {checks.length} factors pass · {pct}% setup score
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontFamily: 'monospace', fontSize: 22, fontWeight: 700, color: signalColor }}>{pct}%</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)' }}>setup score</div>
+                        </div>
+                      </div>
+
+                      {/* CHECKLIST ITEMS */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {checks.map((c, i) => {
+                          const icon = c.pass ? '✓' : c.partial ? '◐' : '✗';
+                          const color = c.pass ? '#1a6b3c' : c.partial ? '#c9a84c' : '#c0392b';
+                          const bg = c.pass ? 'var(--green-light)' : c.partial ? 'var(--gold-light)' : 'var(--red-light)';
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', background: 'var(--surface2)', borderRadius: 8, border: `1px solid ${color}25` }}>
+                              <div style={{ width: 22, height: 22, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>
+                                {icon}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.label}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>{c.detail}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text3)' }}>
+                        ⚠ Checklist is for educational purposes only. Not financial advice.
+      Factors: beat streak, EPS surprise history, short interest, revenue growth, Ecnived score, news sentiment.
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
 
               {/* EARNINGS HISTORY */}
               {detail.earningsHistory?.length > 0 && (
